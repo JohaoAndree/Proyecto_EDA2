@@ -1,226 +1,267 @@
 #include <iostream>
-#include <string> // Necesario para std::string
+#include <string>
 #include "HashTable.h"
 
 using namespace std;
 
-// Constructor
+// Constructor: Inicializa la tabla hash.
+// Asigna memoria para el array de entradas y configura cada slot como vacío.
 HashTable::HashTable(int tam) {
     capacidad = tam;
-    cantidad = 0;
-    ocupadosConEliminados = 0; // Inicializar nuevo contador
-    tabla = new Entrada[capacidad];
+    cantidad = 0; // Número inicial de elementos válidos.
+    ocupadosConEliminados = 0; // Número inicial de slots físicamente ocupados.
+    tabla = new Entrada[capacidad]; // Asignación dinámica de memoria para la tabla.
 
+    // Inicializa cada slot de la tabla.
     for (int i = 0; i < capacidad; i++) {
-        tabla[i].ocupado = false;
-        tabla[i].eliminado = false; // Inicializar la nueva bandera
-        tabla[i].valor = nullptr; // Inicializar puntero a null
+        tabla[i].ocupado = false;   // Marca el slot como vacío.
+        tabla[i].eliminado = false; // Marca el slot como no lógicamente eliminado.
+        tabla[i].valor = nullptr;   // Inicializa el puntero a datos del asistente como nulo.
     }
 }
 
-// Destructor
+// Destructor: Libera toda la memoria dinámica asignada por la tabla hash.
+// Iterar sobre la tabla para liberar la memoria de cada objeto DatosAsistente
+// y luego liberar el array principal de entradas.
 HashTable::~HashTable() {
-    // Liberar memoria de cada DatosAsistente si fueron asignados dinámicamente
     for (int i = 0; i < capacidad; i++) {
-        if (tabla[i].ocupado || tabla[i].eliminado) { // Si estuvo ocupado alguna vez
+        // Si el slot fue ocupado en algún momento (activo o lógicamente eliminado),
+        // su 'valor' fue asignado dinámicamente y debe ser liberado.
+        if (tabla[i].valor != nullptr) {
             delete tabla[i].valor;
             tabla[i].valor = nullptr;
         }
     }
-    delete[] tabla;
+    delete[] tabla; // Libera el array de entradas de la tabla.
 }
 
-// Función Hash (sin cambios, ya maneja negativos)
+// Función Hash: Calcula el índice inicial para una clave.
+// Utiliza el operador módulo y ajusta para claves negativas.
 int HashTable::funcionHash(int clave) {
     int hash = clave % capacidad;
+    // Asegura que el índice hash sea no negativo.
     return (hash < 0) ? hash + capacidad : hash;
 }
 
-// Renombrada y ajustada para encontrar un slot para inserción
-// Considera slots eliminados como posibles para reusar
+// Busca un slot adecuado para la inserción usando sondaje lineal.
+// Puede reutilizar slots marcados como eliminados lógicamente para optimizar espacio.
 int HashTable::buscarSlotInsercion(int claveOriginal, int indiceInicial) {
     int i = 0;
     int indice = indiceInicial;
-    int primerEliminado = -1; // Para recordar el primer slot eliminado encontrado
+    int primerEliminado = -1; // Almacena el primer índice de un slot lógicamente eliminado encontrado.
 
-    while (i < capacidad) { // Cambiado a i < capacidad para evitar bucle infinito
-        indice = (indiceInicial + i) % capacidad;
+    while (i < capacidad) {
+        indice = (indiceInicial + i) % capacidad; // Aplica sondaje lineal.
 
         if (!tabla[indice].ocupado) { // Si el slot está completamente vacío
+            // Si encontramos un slot eliminado previamente, lo reutilizamos antes de un slot totalmente vacío.
             if (primerEliminado != -1) {
-                return primerEliminado; // Preferimos usar un slot eliminado si encontramos uno antes
+                return primerEliminado;
             }
-            return indice; // Slot vacío encontrado
+            return indice; // Se encontró un slot vacío y no había eliminados previos.
         }
 
         if (tabla[indice].eliminado) { // Si el slot está lógicamente eliminado
             if (primerEliminado == -1) {
-                primerEliminado = indice; // Registramos el primer slot eliminado
+                primerEliminado = indice; // Guarda el índice del primer slot eliminado.
             }
         } else if (tabla[indice].clave == claveOriginal) {
-            // Ya existe la clave, esto debería ser manejado por el método insertar antes de llamar a esto.
-            // Pero como fallback, podemos indicar que ya existe o lanzar una excepción.
-            // Para este contexto, retornar -2 para indicar que ya existe.
-            return -2;
+            // La clave ya existe en un slot ocupado válido.
+            // Esto es un caso de seguridad, ya que 'insertar' ya verifica duplicados.
+            return -2; // Código especial para indicar que la clave ya existe.
         }
-        i++;
+        i++; // Avanza al siguiente slot en la secuencia de sondaje.
     }
 
+    // Si se recorrió toda la secuencia de sondaje y solo se encontraron slots eliminados o llenos,
+    // se devuelve el primer slot eliminado encontrado (si lo hay).
     if (primerEliminado != -1) {
-        return primerEliminado; // Si no encontramos un slot vacío pero sí uno eliminado
+        return primerEliminado;
     }
 
-    return -1; // Tabla llena o no se encontró espacio disponible (esto debería ser manejado por rehash)
+    // No se encontró ningún slot disponible (la tabla está efectivamente llena para esta secuencia).
+    return -1;
 }
 
-
-// Rehashing (cambios menores para manejar DatosAsistente y eliminado)
+// Duplica la capacidad de la tabla y reinserta todos los elementos válidos.
+// Este proceso se realiza para mantener la eficiencia de las operaciones.
 void HashTable::rehash() {
     int antiguaCapacidad = capacidad;
-    int nuevaCapacidad = capacidad * 2;
-    Entrada* nuevaTabla = new Entrada[nuevaCapacidad];
+    Entrada* tablaAntigua = tabla; // Guarda la referencia a la tabla actual.
 
-    for (int i = 0; i < nuevaCapacidad; i++) {
-        nuevaTabla[i].ocupado = false;
-        nuevaTabla[i].eliminado = false;
-        nuevaTabla[i].valor = nullptr;
+    capacidad *= 2; // Duplica la capacidad.
+    tabla = new Entrada[capacidad]; // Asigna nueva memoria para la tabla más grande.
+    cantidad = 0; // Reinicia el contador de elementos válidos para la nueva tabla.
+    ocupadosConEliminados = 0; // Reinicia el contador de slots físicamente ocupados.
+
+    // Inicializa todos los nuevos slots como vacíos.
+    for (int i = 0; i < capacidad; i++) {
+        tabla[i].ocupado = false;
+        tabla[i].eliminado = false;
+        tabla[i].valor = nullptr;
     }
-
-    // Guardamos la tabla antigua para reinsertar
-    Entrada* tablaAntigua = tabla;
-    tabla = nuevaTabla; // La nueva tabla se convierte en la actual
-    capacidad = nuevaCapacidad;
-    cantidad = 0; // Resetear cantidad de elementos válidos
-    ocupadosConEliminados = 0; // Resetear contador de slots físicamente ocupados
 
     cout << ">>> Rehashing iniciado. Nueva capacidad: " << capacidad << endl;
 
-    // Reinserta elementos antiguos que NO estén eliminados lógicamente
+    // Reinserta solo los elementos que estaban activos (no eliminados lógicamente)
+    // de la tabla antigua a la nueva tabla.
     for (int i = 0; i < antiguaCapacidad; i++) {
-        if (tablaAntigua[i].ocupado) { // Solo reinsertamos elementos VÁLIDOS
-            int clave = tablaAntigua[i].clave;
-            // Reusar insertar para manejar la inserción con sondaje en la nueva tabla
-            // IMPORTANTE: Se crea una copia del valor. El original se borrará con tablaAntigua.
-            insertar(clave, tablaAntigua[i].valor->nombre, tablaAntigua[i].valor->edad, tablaAntigua[i].valor->horaCompra);
+        if (tablaAntigua[i].ocupado) {
+            // Llama al método insertar para reubicar la clave y sus datos en la nueva tabla.
+            // Se crea una nueva copia de DatosAsistente en la nueva tabla.
+            insertar(tablaAntigua[i].clave, tablaAntigua[i].valor->nombre,
+                     tablaAntigua[i].valor->edad, tablaAntigua[i].valor->horaCompra);
         }
-        // Liberar la memoria del valor de la entrada antigua
-        delete tablaAntigua[i].valor;
-        tablaAntigua[i].valor = nullptr;
+        // Libera la memoria de los DatosAsistente de la entrada antigua.
+        if (tablaAntigua[i].valor != nullptr) {
+            delete tablaAntigua[i].valor;
+            tablaAntigua[i].valor = nullptr;
+        }
     }
 
-    delete[] tablaAntigua; // Liberar la memoria de la tabla antigua
+    delete[] tablaAntigua; // Libera la memoria del array de la tabla antigua.
     cout << ">>> Rehashing completado. Nueva capacidad: " << capacidad << endl;
 }
 
-// Inserción (ahora recibe nombre, edad, horaCompra)
+// Inserta una nueva clave y sus datos asociados en la tabla hash.
+// Retorna true si la inserción es exitosa, false si la clave ya existe.
 bool HashTable::insertar(int clave, const std::string& nombre, int edad, const std::string& horaCompra) {
-    if (buscar(clave) != nullptr) { // Usamos el nuevo buscar que retorna DatosAsistente*
+    // Verifica si la clave ya existe para evitar duplicados.
+    if (buscar(clave) != nullptr) {
         cout << "Error: La clave " << clave << " ya existe. No se puede insertar duplicado.\n";
         return false;
     }
 
-    // Punto 7: Umbral de rehashing al 75%
+    // Activa el rehashing si el factor de carga (elementos activos / capacidad)
+    // alcanza o supera el 75%.
     if (static_cast<double>(cantidad) / capacidad >= 0.75) {
         rehash();
     }
 
-    int hash = funcionHash(clave);
-    int indice = buscarSlotInsercion(clave, hash);
+    int hash = funcionHash(clave); // Calcula el índice hash inicial.
+    int indice = buscarSlotInsercion(clave, hash); // Encuentra el slot de inserción.
 
-    if (indice == -1) { // Esto solo debería ocurrir si la tabla está completamente llena después de rehash,
-                        // o si la función de sondaje no encontró espacio.
-                        // Con el umbral de rehashing, esto es menos probable, pero es un buen fallback.
-        cerr << "Error: No se encontró espacio para insertar la clave " << clave << " después de rehashing.\n";
+    // Manejo de errores si no se encuentra un slot válido para insertar.
+    if (indice == -1) {
+        cerr << "Error: No se encontró espacio para insertar la clave " << clave << ".\n";
         return false;
     }
-    if (indice == -2) { // Clave ya existe (manejo de seguridad)
-        cout << "Error interno: Clave " << clave << " ya existía al intentar insertar. Esto no debería pasar después de la verificación inicial.\n";
+    if (indice == -2) { // Este caso solo debería ocurrir si hay un error lógico en el flujo.
+        cout << "Error interno: Clave " << clave << " ya existía al intentar insertar.\n";
         return false;
     }
 
-    // Si estamos reusando un slot "eliminado", no incrementamos ocupadosConEliminados
+    // Incrementa el contador de slots físicamente ocupados solo si es un slot nuevo y no reutilizado.
     if (!tabla[indice].ocupado && !tabla[indice].eliminado) {
-        ocupadosConEliminados++; // Solo incrementa si es un slot realmente nuevo
+        ocupadosConEliminados++;
     }
 
-    tabla[indice].clave = clave;
-    // Creamos una nueva instancia de DatosAsistente
+    tabla[indice].clave = clave; // Almacena la clave.
+    // Crea dinámicamente un objeto DatosAsistente y almacena el puntero.
     tabla[indice].valor = new DatosAsistente{nombre, edad, horaCompra};
-    tabla[indice].ocupado = true;
-    tabla[indice].eliminado = false; // Asegurarse de que no esté marcado como eliminado
-    cantidad++; // Incrementa solo la cantidad de elementos válidos
+    tabla[indice].ocupado = true;   // Marca el slot como ocupado.
+    tabla[indice].eliminado = false; // Asegura que no esté marcado como eliminado.
+    cantidad++; // Incrementa el contador de elementos válidos.
     return true;
 }
 
-// Búsqueda (ahora retorna puntero a DatosAsistente)
+// Busca una clave en la tabla hash.
+// Retorna un puntero a los DatosAsistente asociados si la clave es encontrada,
+// o nullptr si la clave no existe o está lógicamente eliminada.
 DatosAsistente* HashTable::buscar(int clave) {
-    int hash = funcionHash(clave);
+    int hash = funcionHash(clave); // Calcula el índice hash inicial.
     int i = 0;
     int indice = hash;
 
     while (i < capacidad) {
-        indice = (hash + i) % capacidad;
+        indice = (hash + i) % capacidad; // Sondaje lineal.
 
+        // Si el slot está completamente vacío (no ocupado y no eliminado),
+        // la clave no puede existir más adelante en esta secuencia de sondaje.
         if (!tabla[indice].ocupado && !tabla[indice].eliminado) {
-            // Slot vacío no marcado como eliminado -> la clave no existe
             return nullptr;
         }
 
+        // Si el slot está ocupado y la clave coincide, se encontró el elemento.
         if (tabla[indice].ocupado && tabla[indice].clave == clave) {
-            // Clave encontrada y no está lógicamente eliminada
-            return tabla[indice].valor;
+            return tabla[indice].valor; // Retorna los datos asociados.
         }
-        // Si el slot está ocupado pero con otra clave, o está eliminado, continuamos sondeando
+        // Si el slot está ocupado con otra clave, o está lógicamente eliminado,
+        // se continúa sondeando.
         i++;
     }
-    return nullptr; // Clave no encontrada después de recorrer toda la secuencia de sondaje
+    return nullptr; // La clave no fue encontrada después de recorrer toda la secuencia.
 }
 
-// Nuevo método de eliminación lógica (Punto 8)
+// Marca una entrada como lógicamente eliminada.
+// Esto permite que el slot sea potencialmente reutilizado en futuras inserciones
+// sin romper las secuencias de sondaje existentes.
 bool HashTable::eliminar(int clave) {
-    int hash = funcionHash(clave);
+    int hash = funcionHash(clave); // Calcula el índice hash inicial.
     int i = 0;
     int indice = hash;
 
     while (i < capacidad) {
-        indice = (hash + i) % capacidad;
+        indice = (hash + i) % capacidad; // Sondaje lineal.
 
+        // Si el slot está completamente vacío, la clave no puede existir.
         if (!tabla[indice].ocupado && !tabla[indice].eliminado) {
-            // Slot vacío y no eliminado -> la clave no existe
             return false;
         }
 
+        // Si la clave coincide y está ocupada (válida).
         if (tabla[indice].ocupado && tabla[indice].clave == clave) {
-            // Clave encontrada y está ocupada (válida)
-            tabla[indice].ocupado = false;   // Marcar como no ocupado
-            tabla[indice].eliminado = true;  // Marcar como lógicamente eliminado
-            delete tabla[indice].valor;      // Liberar memoria de los datos del asistente
-            tabla[indice].valor = nullptr;   // Poner el puntero a null
-            cantidad--;                      // Decrementar la cantidad de elementos válidos
+            tabla[indice].ocupado = false;   // Marca el slot como no activo.
+            tabla[indice].eliminado = true;  // Marca el slot como lógicamente eliminado.
+            // Libera la memoria de los datos del asistente.
+            if (tabla[indice].valor != nullptr) {
+                delete tabla[indice].valor;
+                tabla[indice].valor = nullptr;
+            }
+            cantidad--; // Decrementa el contador de elementos válidos.
             cout << "Clave " << clave << " eliminada lógicamente." << endl;
             return true;
         }
-        i++;
+        i++; // Continúa sondeando.
     }
-    return false; // Clave no encontrada
+    return false; // La clave no fue encontrada para eliminar.
 }
 
-// Mostrar (Punto 9: Mostrar todos los datos)
+// Muestra el estado actual de la tabla hash.
+// Incluye la capacidad, el número de elementos activos y el detalle de cada slot.
 void HashTable::mostrar() {
-    cout << "\n--- Tabla Hash --- (Capacidad: " << capacidad << ", Elementos Activos: " << cantidad << ", Slots Ocupados (físicos): " << ocupadosConEliminados << ")\n";
+    cout << "\n--- Estado Actual de la Tabla Hash ---\n";
+    cout << "Capacidad Total: " << capacidad
+         << ", Elementos Activos: " << cantidad
+         << ", Slots Ocupados (físicos, incl. eliminados): " << ocupadosConEliminados << "\n";
+    cout << "--------------------------------------\n";
+
     for (int i = 0; i < capacidad; i++) {
         cout << "[" << i << "] ";
         if (tabla[i].ocupado) {
+            // Muestra los detalles completos del asistente si el slot está ocupado.
             cout << "-> Clave: " << tabla[i].clave
                  << ", Nombre: " << tabla[i].valor->nombre
                  << ", Edad: " << tabla[i].valor->edad
                  << ", Hora Compra: " << tabla[i].valor->horaCompra
-                 << " (OCUPADO)" << endl;
+                 << " (ACTIVO)" << endl;
         } else if (tabla[i].eliminado) {
+            // Indica que el slot está lógicamente eliminado.
             cout << "-> (ELIMINADO LOGICAMENTE)" << endl;
         } else {
+            // Indica que el slot está completamente vacío.
             cout << "-> (VACÍO)" << endl;
         }
     }
-    cout << "-------------------\n";
+    cout << "--------------------------------------\n";
+}
+
+// Getter para la capacidad actual de la tabla.
+int HashTable::getCapacidad() const {
+    return capacidad;
+}
+
+// Getter para la cantidad de elementos válidos en la tabla.
+int HashTable::getCantidad() const {
+    return cantidad;
 }
