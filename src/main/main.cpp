@@ -5,17 +5,9 @@
 #include "../modules/tree_Rivera/AVL.h"
 #include "../modules/heap_JeanPaul/Heap.h"
 #include "../modules/hash_Johao/hashTable.h"
+#include "../modules/Persona.h" // Incluir definición de Persona
 
 using namespace std;
-
-struct Persona {
-    string dni;
-    string nombre;
-    int edad;
-    int zona;
-    string hora;
-    int prioridad;
-};
 
 // Instancias globales de las estructuras
 AVLTree avl;
@@ -42,12 +34,11 @@ void registrarAccesoManual() {
 
 // Cargar accesos desde archivo
 void cargarAccesosArchivo() {
-    string archivo;
-    cout << "Nombre del archivo: ";
-    cin >> archivo;
+    // Ruta absoluta al archivo de usuarios masivos
+    string archivo = "c:/Users/Bruno Tupia Canales/Desktop/PROGRA/Proyecto_EDA2/src/main/usuarios_masivos.txt";
     ifstream fin(archivo);
     if (!fin) {
-        cout << "No se pudo abrir el archivo.\n";
+        cout << "No se pudo abrir el archivo masivo en la ruta predefinida.\n";
         return;
     }
     Persona p;
@@ -56,7 +47,7 @@ void cargarAccesosArchivo() {
         heap.insertar(p);
         avl.insertar(p.hora, p.zona); // AVL solo usa hora y zona
     }
-    cout << "Carga masiva completada.\n";
+    cout << "Carga masiva completada desde archivo predefinido.\n";
 }
 
 // Buscar persona por DNI
@@ -91,7 +82,7 @@ void mostrarTop5Prioridades() {
 // Extraer acceso de mayor prioridad (Heap)
 void extraerMayorPrioridad() {
     Persona p = heap.extraerMax();
-    cout << "Extraído: " << p.dni << " - " << p.nombre << " (Prioridad: " << p.prioridad << ")\n";
+    cout << "Extraido: " << p.dni << " - " << p.nombre << " (Prioridad: " << p.prioridad << ")\n";
 }
 
 // Consultar accesos por zona y hora (AVL)
@@ -105,7 +96,7 @@ void consultarAccesosPorZonaHora() {
 // Mostrar zona con más accesos (AVL)
 void mostrarZonaMasAccesos() {
     int zona = avl.zonaConMasAccesos();
-    cout << "Zona con más accesos: " << zona << endl;
+    cout << "Zona con mas accesos: " << zona << endl;
 }
 
 int main() {
@@ -119,10 +110,9 @@ int main() {
         cout << "5. Mostrar top 5 prioridades (Heap)\n";
         cout << "6. Extraer acceso de mayor prioridad (Heap)\n";
         cout << "7. Consultar accesos por zona y hora (AVL)\n";
-        cout << "8. Mostrar zona con más accesos (AVL)\n";
-        cout << "9. Consultar accesos por rango de horas (AVL)\n";
+        cout << "8. Mostrar zona con mas accesos (AVL)\n";
         cout << "0. Salir\n";
-        cout << "Seleccione opción: ";
+        cout << "Seleccione opcion: ";
         cin >> opcion;
         switch (opcion) {
             case 1: registrarAccesoManual(); break;
@@ -133,17 +123,8 @@ int main() {
             case 6: extraerMayorPrioridad(); break;
             case 7: consultarAccesosPorZonaHora(); break;
             case 8: mostrarZonaMasAccesos(); break;
-            case 9: {
-                string desde, hasta;
-                cout << "Desde (HH:MM): ";
-                cin >> desde;
-                cout << "Hasta (HH:MM): ";
-                cin >> hasta;
-                avl.consultarRango(desde, hasta);
-                break;
-            }
             case 0: cout << "Saliendo...\n"; break;
-            default: cout << "Opción inválida.\n";
+            default: cout << "Opcion invalida.\n";
         }
     } while (opcion != 0);
     return 0;

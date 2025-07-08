@@ -88,10 +88,14 @@ Persona MaxHeap::extraerMax() {
 }
 
 void MaxHeap::mostrarTop5() {
-    int n = (size < 5) ? size : 5;
+    // Copia temporal del heap
+    MaxHeap copia = *this;
+    int n = (copia.size < 5) ? copia.size : 5;
     cout << "Top " << n << " prioridades:\n";
     for (int i = 0; i < n; ++i) {
-        cout << datos[i].dni << " - " << datos[i].nombre << " (Prioridad: " << datos[i].prioridad << ")\n";
+        if (copia.size == 0) break;
+        Persona p = copia.extraerMax();
+        cout << p.dni << " - " << p.nombre << " (Prioridad: " << p.prioridad << ")\n";
     }
 }
 
