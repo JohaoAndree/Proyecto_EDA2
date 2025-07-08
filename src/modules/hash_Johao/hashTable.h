@@ -2,6 +2,7 @@
 #define HASHTABLE_H
 
 #include <string>
+#include "../Persona.h" // Incluir Persona.h para usar la estructura Persona
 
 // Estructura que contiene los datos detallados de un asistente.
 struct DatosAsistente {

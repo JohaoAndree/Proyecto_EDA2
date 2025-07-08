@@ -82,7 +82,9 @@ void AVLTree::inOrder(NodoAVL* nodo) {
     if (!nodo) return;
     inOrder(nodo->izq);
     cout << "Hora " << nodo->hora << ":\n";
-    for (auto& [zona, cantidad] : nodo->accesosPorZona) {
+    for (auto& it : nodo->accesosPorZona) {
+        int zona = it.first;
+        int cantidad = it.second;
         cout << "  Zona " << zona << ": " << cantidad << " accesos\n";
     }
     inOrder(nodo->der);
@@ -100,7 +102,9 @@ void AVLTree::mostrarRango(NodoAVL* nodo, const string& desde, const string& has
 
     if (desde <= nodo->hora && nodo->hora <= hasta) {
         cout << "Hora " << nodo->hora << ":\n";
-        for (auto& [zona, cantidad] : nodo->accesosPorZona) {
+        for (auto& it : nodo->accesosPorZona) {
+            int zona = it.first;
+            int cantidad = it.second;
             cout << "  Zona " << zona << ": " << cantidad << " accesos\n";
         }
     }
@@ -116,7 +120,9 @@ void AVLTree::consultarRango(const string& desde, const string& hasta) {
 // Recorre todo el árbol y acumula accesos por zona
 void AVLTree::acumularZonas(NodoAVL* nodo, map<int, int>& totalZonas) {
     if (!nodo) return;
-    for (auto& [zona, cantidad] : nodo->accesosPorZona) {
+    for (auto& it : nodo->accesosPorZona) {
+        int zona = it.first;
+        int cantidad = it.second;
         totalZonas[zona] += cantidad;
     }
     acumularZonas(nodo->izq, totalZonas);
@@ -130,7 +136,9 @@ int AVLTree::zonaConMasAccesos() {
     int zonaMax = -1;
     int maxAcc = 0;
 
-    for (auto& [zona, cantidad] : totalZonas) {
+    for (auto& it : totalZonas) {
+        int zona = it.first;
+        int cantidad = it.second;
         if (cantidad > maxAcc) {
             maxAcc = cantidad;
             zonaMax = zona;

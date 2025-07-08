@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include "../Persona.h"
 using namespace std;
 
 struct NodoAVL {
