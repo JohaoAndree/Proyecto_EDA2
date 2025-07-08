@@ -120,6 +120,7 @@ int main() {
         cout << "6. Extraer acceso de mayor prioridad (Heap)\n";
         cout << "7. Consultar accesos por zona y hora (AVL)\n";
         cout << "8. Mostrar zona con más accesos (AVL)\n";
+        cout << "9. Consultar accesos por rango de horas (AVL)\n";
         cout << "0. Salir\n";
         cout << "Seleccione opción: ";
         cin >> opcion;
@@ -132,6 +133,15 @@ int main() {
             case 6: extraerMayorPrioridad(); break;
             case 7: consultarAccesosPorZonaHora(); break;
             case 8: mostrarZonaMasAccesos(); break;
+            case 9: {
+                string desde, hasta;
+                cout << "Desde (HH:MM): ";
+                cin >> desde;
+                cout << "Hasta (HH:MM): ";
+                cin >> hasta;
+                avl.consultarRango(desde, hasta);
+                break;
+            }
             case 0: cout << "Saliendo...\n"; break;
             default: cout << "Opción inválida.\n";
         }
