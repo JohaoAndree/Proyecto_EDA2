@@ -4,16 +4,15 @@
 #include "../modules/tree_Rivera/AVL.h"
 #include "../modules/heap_JeanPaul/Heap.h"
 #include "../modules/hash_Johao/hashTable.h"
-#include "../modules/Persona.h" // Incluir definición de Persona
+#include "../modules/Persona.h" 
 
 using namespace std;
 
-// Instancias globales de las estructuras
 AVLTree avl;
 MaxHeap heap;
 HashTable tablaHash(1009);
 
-// Función para registrar acceso manual
+//aca se registra el acceso de las personas de manera manual
 void registrarAccesoManual() {
     Persona p;
     cout << "DNI: "; cin >> p.dni;
@@ -22,18 +21,20 @@ void registrarAccesoManual() {
     cout << "Zona: "; cin >> p.zona;
     cout << "Hora (HH:MM): "; cin >> p.hora;
     cout << "Prioridad (1-100): "; cin >> p.prioridad;
-    // Insertar en HashTable (DNI como int, hora como string)
+
+    //Se inserta tabla hash
     tablaHash.insertar(stoi(p.dni), p.nombre, p.edad, p.hora);
-    // Insertar en Heap
+    // se inserta en el heap
     heap.insertar(p);
-    // Insertar en AVL
+
+
+    //Insertar en AVL
     avl.insertar(p.hora, p.zona);
     cout << "Acceso registrado exitosamente.\n";
 }
 
-// Cargar accesos desde archivo
+//Se hace la carga del archivo de usuarios masivos de manera automatica
 void cargarAccesosArchivo() {
-    // Ruta absoluta al archivo de usuarios masivos
     string archivo = "c:/Users/Bruno Tupia Canales/Desktop/PROGRA/Proyecto_EDA2/src/main/usuarios_masivos.txt";
     ifstream fin(archivo);
     if (!fin) {
@@ -41,28 +42,34 @@ void cargarAccesosArchivo() {
         return;
     }
     Persona p;
+
     while (fin >> p.dni >> p.nombre >> p.edad >> p.zona >> p.hora >> p.prioridad) {
         tablaHash.insertar(stoi(p.dni), p.nombre, p.edad, p.hora);
         heap.insertar(p);
-        avl.insertar(p.hora, p.zona); // AVL solo usa hora y zona
+        avl.insertar(p.hora, p.zona);
     }
+
     cout << "Carga masiva completada desde archivo predefinido.\n";
+
+
 }
 
-// Buscar persona por DNI
+//Opcion 3: Buscar persona por DNI
 void buscarPorDNI() {
     string dni;
     cout << "Ingrese DNI: ";
     cin >> dni;
     auto datos = tablaHash.buscar(stoi(dni));
+
     if (datos) {
         cout << "Nombre: " << datos->nombre << ", Edad: " << datos->edad << ", Hora: " << datos->horaCompra << endl;
     } else {
         cout << "No encontrado.\n";
     }
+
 }
 
-// Validar existencia por DNI
+//Opcion 4: validar existencia por DNI
 void validarExistenciaDNI() {
     string dni;
     cout << "Ingrese DNI: ";
@@ -73,34 +80,39 @@ void validarExistenciaDNI() {
         cout << "No existe.\n";
 }
 
-// Mostrar top 5 prioridades (Heap)
+// OPcion 5: Mostrar top 5 prioridades
 void mostrarTop5Prioridades() {
-    heap.mostrarTop5();
+    heap.mostrarTop5() ;
 }
 
-// Extraer acceso de mayor prioridad (Heap)
+
+//opcion 6: Extraer acceso de mayor prioridad
 void extraerMayorPrioridad() {
     Persona p = heap.extraerMax();
     cout << "Extraido: " << p.dni << " - " << p.nombre << " (Prioridad: " << p.prioridad << ")\n";
 }
 
-// Consultar accesos por zona y hora (AVL)
+// OPcion 7. Consultar accesos por zona y hora (AVL)
 void consultarAccesosPorZonaHora() {
+
     string desde, hasta;
     cout << "Desde hora (HH:MM): "; cin >> desde;
+    
     cout << "Hasta hora (HH:MM): "; cin >> hasta;
     avl.consultarRango(desde, hasta);
 }
 
-// Mostrar zona con más accesos (AVL)
+//Opcion 8: Mostrar zona con más accesos (AVL)
 void mostrarZonaMasAccesos() {
     int zona = avl.zonaConMasAccesos();
+
     cout << "Zona con mas accesos: " << zona << endl;
 }
 
 int main() {
     int opcion;
     do {
+
         cout << "\n--- SISTEMA DE CONTROL DE ACCESOS ---\n";
         cout << "1. Registrar acceso manual (individual)\n";
         cout << "2. Cargar accesos desde archivo (masivo)\n";
@@ -113,6 +125,8 @@ int main() {
         cout << "0. Salir\n";
         cout << "Seleccione opcion: ";
         cin >> opcion;
+
+
         switch (opcion) {
             case 1: registrarAccesoManual(); break;
             case 2: cargarAccesosArchivo(); break;
@@ -125,6 +139,9 @@ int main() {
             case 0: cout << "Saliendo...\n"; break;
             default: cout << "Opcion invalida.\n";
         }
+
     } while (opcion != 0);
+
     return 0;
+
 }
