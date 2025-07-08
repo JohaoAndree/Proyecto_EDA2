@@ -35,32 +35,40 @@ NodoAVL* AVLTree::rotarIzq(NodoAVL* x) {
     return y;
 }
 
-// Inserción por hora y zona
+void AVLTree::agregarZona(NodoAVL* nodo, int zona) {
+    for (int i = 0; i < nodo->numZonas; ++i) {
+        if (nodo->accesosPorZona[i].zona == zona) {
+            nodo->accesosPorZona[i].cantidad++;
+            return;
+        }
+    }
+    if (nodo->numZonas < MAX_ZONAS) {
+        nodo->accesosPorZona[nodo->numZonas].zona = zona;
+        nodo->accesosPorZona[nodo->numZonas].cantidad = 1;
+        nodo->numZonas++;
+    }
+}
+
 NodoAVL* AVLTree::insertar(NodoAVL* nodo, const string& hora, int zona) {
     if (!nodo) {
         NodoAVL* nuevo = new NodoAVL(hora);
-        nuevo->accesosPorZona[zona] = 1;
+        nuevo->accesosPorZona[0].zona = zona;
+        nuevo->accesosPorZona[0].cantidad = 1;
+        nuevo->numZonas = 1;
         return nuevo;
     }
-
     if (hora < nodo->hora)
         nodo->izq = insertar(nodo->izq, hora, zona);
     else if (hora > nodo->hora)
         nodo->der = insertar(nodo->der, hora, zona);
     else {
-        // Si la hora ya existe, se incrementa el acceso a esa zona
-        nodo->accesosPorZona[zona]++;
+        agregarZona(nodo, zona);
         return nodo;
     }
-
-    // Balanceo AVL
     nodo->altura = 1 + max(altura(nodo->izq), altura(nodo->der));
     int b = balance(nodo);
-
-    if (b > 1 && hora < nodo->izq->hora)
-        return rotarDer(nodo);
-    if (b < -1 && hora > nodo->der->hora)
-        return rotarIzq(nodo);
+    if (b > 1 && hora < nodo->izq->hora) return rotarDer(nodo);
+    if (b < -1 && hora > nodo->der->hora) return rotarIzq(nodo);
     if (b > 1 && hora > nodo->izq->hora) {
         nodo->izq = rotarIzq(nodo->izq);
         return rotarDer(nodo);
@@ -69,7 +77,6 @@ NodoAVL* AVLTree::insertar(NodoAVL* nodo, const string& hora, int zona) {
         nodo->der = rotarDer(nodo->der);
         return rotarIzq(nodo);
     }
-
     return nodo;
 }
 
@@ -77,65 +84,55 @@ void AVLTree::insertar(const string& hora, int zona) {
     raiz = insertar(raiz, hora, zona);
 }
 
-// Inorder para mostrar accesos por hora
-void AVLTree::inOrder(NodoAVL* nodo) {
-    if (!nodo) return;
-    inOrder(nodo->izq);
-    cout << "Hora " << nodo->hora << ":\n";
-    for (auto& [zona, cantidad] : nodo->accesosPorZona) {
-        cout << "  Zona " << zona << ": " << cantidad << " accesos\n";
-    }
-    inOrder(nodo->der);
-}
-
-void AVLTree::mostrar() {
-    inOrder(raiz);
-}
-
-// Consultas por franja horaria
 void AVLTree::mostrarRango(NodoAVL* nodo, const string& desde, const string& hasta) {
     if (!nodo) return;
-    if (desde < nodo->hora)
-        mostrarRango(nodo->izq, desde, hasta);
-
-    if (desde <= nodo->hora && nodo->hora <= hasta) {
-        cout << "Hora " << nodo->hora << ":\n";
-        for (auto& [zona, cantidad] : nodo->accesosPorZona) {
-            cout << "  Zona " << zona << ": " << cantidad << " accesos\n";
+    if (nodo->hora > desde) mostrarRango(nodo->izq, desde, hasta);
+    if (nodo->hora >= desde && nodo->hora <= hasta) {
+        cout << "Hora: " << nodo->hora << " | Zonas: ";
+        for (int i = 0; i < nodo->numZonas; ++i) {
+            cout << nodo->accesosPorZona[i].zona << "(" << nodo->accesosPorZona[i].cantidad << ") ";
         }
+        cout << endl;
     }
-
-    if (hasta > nodo->hora)
-        mostrarRango(nodo->der, desde, hasta);
+    if (nodo->hora < hasta) mostrarRango(nodo->der, desde, hasta);
 }
 
 void AVLTree::consultarRango(const string& desde, const string& hasta) {
     mostrarRango(raiz, desde, hasta);
 }
 
-// Recorre todo el árbol y acumula accesos por zona
-void AVLTree::acumularZonas(NodoAVL* nodo, map<int, int>& totalZonas) {
+void AVLTree::acumularZonas(NodoAVL* nodo, int* totalZonas, int& maxZona, int& maxCantidad) {
     if (!nodo) return;
-    for (auto& [zona, cantidad] : nodo->accesosPorZona) {
-        totalZonas[zona] += cantidad;
+    for (int i = 0; i < nodo->numZonas; ++i) {
+        int z = nodo->accesosPorZona[i].zona;
+        totalZonas[z] += nodo->accesosPorZona[i].cantidad;
+        if (totalZonas[z] > maxCantidad) {
+            maxCantidad = totalZonas[z];
+            maxZona = z;
+        }
     }
-    acumularZonas(nodo->izq, totalZonas);
-    acumularZonas(nodo->der, totalZonas);
+    acumularZonas(nodo->izq, totalZonas, maxZona, maxCantidad);
+    acumularZonas(nodo->der, totalZonas, maxZona, maxCantidad);
 }
 
 int AVLTree::zonaConMasAccesos() {
-    map<int, int> totalZonas;
-    acumularZonas(raiz, totalZonas);
+    int totalZonas[MAX_ZONAS] = {0};
+    int maxZona = -1, maxCantidad = 0;
+    acumularZonas(raiz, totalZonas, maxZona, maxCantidad);
+    return maxZona;
+}
 
-    int zonaMax = -1;
-    int maxAcc = 0;
-
-    for (auto& [zona, cantidad] : totalZonas) {
-        if (cantidad > maxAcc) {
-            maxAcc = cantidad;
-            zonaMax = zona;
-        }
+void AVLTree::inOrder(NodoAVL* nodo) {
+    if (!nodo) return;
+    inOrder(nodo->izq);
+    cout << "Hora: " << nodo->hora << " | Zonas: ";
+    for (int i = 0; i < nodo->numZonas; ++i) {
+        cout << nodo->accesosPorZona[i].zona << "(" << nodo->accesosPorZona[i].cantidad << ") ";
     }
+    cout << endl;
+    inOrder(nodo->der);
+}
 
-    return zonaMax;
+void AVLTree::mostrar() {
+    inOrder(raiz);
 }

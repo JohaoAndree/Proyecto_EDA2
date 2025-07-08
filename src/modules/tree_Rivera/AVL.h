@@ -2,17 +2,24 @@
 #define AVL_H
 
 #include <string>
-#include <map>
+#include "../Persona.h"
+#define MAX_ZONAS 100
 using namespace std;
+
+struct ZonaAcceso {
+    int zona;
+    int cantidad;
+};
 
 struct NodoAVL {
     string hora; // clave principal del árbol
-    map<int, int> accesosPorZona; // zona -> cantidad de accesos
+    ZonaAcceso accesosPorZona[MAX_ZONAS]; // zona -> cantidad de accesos
+    int numZonas;
     int altura;
     NodoAVL* izq;
     NodoAVL* der;
 
-    NodoAVL(const string& h) : hora(h), altura(1), izq(nullptr), der(nullptr) {}
+    NodoAVL(const string& h) : hora(h), numZonas(0), altura(1), izq(nullptr), der(nullptr) {}
 };
 
 class AVLTree {
@@ -26,7 +33,8 @@ private:
     NodoAVL* rotarIzq(NodoAVL* x);
     NodoAVL* rotarDer(NodoAVL* y);
     void mostrarRango(NodoAVL* nodo, const string& desde, const string& hasta);
-    void acumularZonas(NodoAVL* nodo, map<int, int>& totalZonas);
+    void acumularZonas(NodoAVL* nodo, int* totalZonas, int& maxZona, int& maxCantidad);
+    void agregarZona(NodoAVL* nodo, int zona);
 
 public:
     AVLTree();
