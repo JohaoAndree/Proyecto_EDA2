@@ -1,7 +1,8 @@
 #include "avl.h"
 #include <iostream>
-#include <algorithm>
 using namespace std;
+
+inline int max(int a, int b) { return (a > b) ? a : b; }
 
 AVLTree::AVLTree() {
     raiz = nullptr;
