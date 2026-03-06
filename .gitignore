@@ -1,0 +1,18 @@
+# Ejecutables compilados
+*.exe
+*.out
+*.o
+*.obj
+
+# Archivos de depuración
+*.dSYM/
+*.pdb
+
+# Directorios de IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# Archivos del sistema
+Thumbs.db
+.DS_Store
